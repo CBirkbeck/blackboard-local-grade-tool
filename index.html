@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Blackboard Local Grade Tool</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --ink: #0f172a;
+      --muted: #334155;
+      --line: #dbe2ea;
+      --accent: #0b69c7;
+      --accent-2: #0b4f95;
+      --ok: #0f766e;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      color: var(--ink);
+      background: radial-gradient(circle at top right, #e8f2ff 0%, var(--bg) 40%, var(--bg) 100%);
+    }
+
+    .wrap {
+      max-width: 1080px;
+      margin: 20px auto;
+      padding: 0 16px 24px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #0b69c7 0%, #155ca9 55%, #0e4e8f 100%);
+      color: white;
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 10px 20px rgba(11, 105, 199, 0.15);
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+
+    .hero p {
+      margin: 0;
+      line-height: 1.45;
+      color: #e9f3ff;
+      font-size: 0.96rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+    }
+
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 1.02rem;
+      color: #0b3f74;
+    }
+
+    .field {
+      margin-bottom: 10px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.86rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+
+    .field input[type="text"],
+    .field input[type="file"] {
+      width: 100%;
+      border: 1px solid #c8d3df;
+      border-radius: 8px;
+      padding: 8px 9px;
+      font-size: 0.94rem;
+      color: var(--ink);
+      background: #fff;
+    }
+
+    .field details {
+      margin-top: 6px;
+      border: 1px dashed #c8d3df;
+      border-radius: 8px;
+      padding: 6px 8px;
+      background: #f9fcff;
+    }
+
+    .field summary {
+      cursor: pointer;
+      font-size: 0.88rem;
+      color: #0b4f95;
+      font-weight: 600;
+    }
+
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 8px 0 0;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 9px;
+      background: var(--accent);
+      color: white;
+      font-size: 0.94rem;
+      font-weight: 700;
+      padding: 9px 12px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      margin-top: 8px;
+    }
+
+    .btn:hover { background: var(--accent-2); }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .hint {
+      margin-top: 8px;
+      font-size: 0.84rem;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .log-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .log-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .log-head h3 {
+      margin: 0;
+      font-size: 0.98rem;
+      color: #0b3f74;
+    }
+
+    #clear-log-btn {
+      border: 1px solid #b7c5d5;
+      background: #fff;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      color: #0f172a;
+    }
+
+    #log {
+      margin: 0;
+      background: #0b1220;
+      color: #dbeafe;
+      border-radius: 10px;
+      padding: 10px;
+      min-height: 170px;
+      max-height: 320px;
+      overflow: auto;
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 0.81rem;
+      line-height: 1.38;
+    }
+
+    .foot {
+      margin-top: 10px;
+      color: var(--ok);
+      font-size: 0.86rem;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>Blackboard Local Grade Tool (Browser Version)</h1>
+      <p>
+        Fully local processing in your browser: no server upload.
+        Uses built-in <strong>template excel.xlsx</strong>, builds one moderation workbook,
+        then merges moderated exam marks into one Blackboard upload file (<code>.xls</code> name, CSV content).
+      </p>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>1) Build Moderation Workbook</h2>
+
+        <div class="field">
+          <label for="build-export-file">Blackboard export (.xls/.csv)</label>
+          <input id="build-export-file" type="file" accept=".xls,.csv,.txt" />
+        </div>
+
+        <div class="field">
+          <label for="build-module-code">Module code (optional override)</label>
+          <input id="build-module-code" type="text" placeholder="Leave blank to auto-detect from Blackboard export" />
+        </div>
+
+        <div class="field">
+          <label for="build-module-name">Module name</label>
+          <input id="build-module-name" type="text" placeholder="e.g. Computation and Modelling" />
+        </div>
+
+        <div class="field">
+          <label for="build-module-organiser">Module organiser</label>
+          <input id="build-module-organiser" type="text" placeholder="e.g. Shaun Stevens" />
+        </div>
+
+        <div class="field">
+          <details>
+            <summary>Advanced build options (optional)</summary>
+            <div class="field" style="margin-top:8px;">
+              <label for="build-student-id-col">Student ID column override</label>
+              <input id="build-student-id-col" type="text" placeholder="Leave blank for auto-detect" />
+            </div>
+            <div class="field" style="margin-bottom:0;">
+              <label for="build-cw-cols">CW columns override (comma-separated)</label>
+              <input id="build-cw-cols" type="text" placeholder="Leave blank for auto-detect" />
+            </div>
+          </details>
+        </div>
+
+        <button id="build-btn" class="btn" type="button">Generate Moderation Workbook</button>
+
+        <div class="hint">
+          Output name: same as Blackboard export, with <code>.xlsx</code> extension.
+          If <code>Child Course</code> exists, child sheets are created automatically.
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>2) Merge Moderated Marks to Blackboard CSV</h2>
+
+        <div class="field">
+          <label for="merge-export-file">Original Blackboard export (.xls/.csv)</label>
+          <input id="merge-export-file" type="file" accept=".xls,.csv,.txt" />
+        </div>
+
+        <div class="field">
+          <label for="merge-workbook-file">Filled moderation workbook (.xlsx)</label>
+          <input id="merge-workbook-file" type="file" accept=".xlsx" />
+        </div>
+
+        <div class="field">
+          <label for="merge-module-code">Module code (optional if in Exam!C3)</label>
+          <input id="merge-module-code" type="text" placeholder="Leave blank to infer from workbook" />
+        </div>
+
+        <div class="field">
+          <details>
+            <summary>Advanced merge options (optional)</summary>
+            <div class="field" style="margin-top:8px;">
+              <label for="merge-student-id-col">Student ID column override</label>
+              <input id="merge-student-id-col" type="text" placeholder="Leave blank for auto-detect" />
+            </div>
+            <div class="field">
+              <label for="merge-target-col">Target column override</label>
+              <input id="merge-target-col" type="text" placeholder="Leave blank for module-based auto-detect" />
+            </div>
+            <label class="check" for="merge-blank-unmatched">
+              <input id="merge-blank-unmatched" type="checkbox" />
+              Blank target column when no workbook mark exists
+            </label>
+          </details>
+        </div>
+
+        <button id="merge-btn" class="btn" type="button">Create Blackboard Upload CSV</button>
+
+        <div class="hint">
+          If workbook includes <code>Exam Child</code> + <code>Coursework Child</code>,
+          merge reads both and outputs one combined upload file named <code>_upload.xls</code> (CSV content).
+        </div>
+      </div>
+    </section>
+
+    <section class="log-card">
+      <div class="log-head">
+        <h3>Run Log</h3>
+        <button id="clear-log-btn" type="button">Clear log</button>
+      </div>
+      <pre id="log"></pre>
+      <div class="foot">GDPR note: data stays on this machine in browser memory and downloaded files.</div>
+    </section>
+  </div>
+
+  <script src="./vendor/xlsx.full.min.js"></script>
+  <script src="./vendor/jszip.min.js"></script>
+  <script src="./template-base64.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
