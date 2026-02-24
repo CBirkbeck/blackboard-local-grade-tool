@@ -584,6 +584,28 @@
     return { col: m[1].toUpperCase(), row: Number(m[2]) };
   }
 
+  function computeDefaultCourseworkWeights(totalCourseworkWeight, usedCount) {
+    const out = new Array(MAX_TEMPLATE_CW).fill(0);
+    const count = Math.max(0, Math.min(MAX_TEMPLATE_CW, usedCount));
+    if (count === 0) return out;
+
+    const parsedTotal = parseNumber(totalCourseworkWeight);
+    const total = parsedTotal === null ? 40 : parsedTotal;
+    const round2 = (x) => Math.round(x * 100) / 100;
+
+    const even = round2(total / count);
+    let assigned = 0;
+    for (let i = 0; i < count; i += 1) {
+      if (i === count - 1) {
+        out[i] = round2(total - assigned);
+      } else {
+        out[i] = even;
+        assigned = round2(assigned + even);
+      }
+    }
+    return out;
+  }
+
   function colToIdx(col) {
     return XLSX.utils.decode_col(String(col).toUpperCase()) + 1;
   }
@@ -684,6 +706,39 @@
       clearValueLike(cell, true);
     }
 
+    function getCell(rowIdx, col) {
+      const row = getRow(rowIdx);
+      if (!row) return null;
+      const ref = `${String(col).toUpperCase()}${rowIdx}`;
+      return findCellInRow(row, ref);
+    }
+
+    function getCellValue(rowIdx, col) {
+      const cell = getCell(rowIdx, col);
+      if (!cell) return null;
+
+      const cType = cell.getAttribute('t') || '';
+      if (cType === 'inlineStr') {
+        const isNode = Array.from(cell.children).find((x) => x.localName === 'is');
+        if (!isNode) return null;
+        const direct = Array.from(isNode.children).find((x) => x.localName === 't');
+        if (direct) return direct.textContent || '';
+        const runs = [];
+        for (const run of Array.from(isNode.children)) {
+          if (run.localName !== 'r') continue;
+          const tNode = Array.from(run.children).find((x) => x.localName === 't');
+          if (tNode && tNode.textContent) runs.push(tNode.textContent);
+        }
+        return runs.join('');
+      }
+
+      const vNode = Array.from(cell.children).find((x) => x.localName === 'v');
+      if (!vNode || vNode.textContent === null) return null;
+      const text = vNode.textContent;
+      const n = parseNumber(text);
+      return n === null ? text : n;
+    }
+
     function setCellValue(rowIdx, col, value) {
       const cell = ensureCell(rowIdx, col);
       clearValueLike(cell, true);
@@ -721,7 +776,7 @@
       }
     }
 
-    return { doc, maxRow, clearCell, setCellValue, clearFormulaCachedValues };
+    return { doc, maxRow, clearCell, setCellValue, getCellValue, clearFormulaCachedValues };
   }
 
   async function openTemplateXmlWorkbook() {
@@ -904,6 +959,8 @@
   }
 
   function setCourseworkLayoutXml(examEditor, courseworkEditor, labels) {
+    const cwTotal = examEditor.getCellValue(11, 'F');
+    const weights = computeDefaultCourseworkWeights(cwTotal, labels.length);
     const examStart = colToIdx(EXAM_CW_HEADER_FIRST_COL);
     const cwStart = colToIdx(COURSEWORK_CW_HEADER_FIRST_COL);
     for (let i = 0; i < MAX_TEMPLATE_CW; i += 1) {
@@ -911,6 +968,7 @@
       const examCol = idxToCol(examStart + i);
       const cwCol = idxToCol(cwStart + i);
       examEditor.setCellValue(EXAM_CW_HEADER_ROW, examCol, label);
+      examEditor.setCellValue(EXAM_CW_WEIGHT_ROW, examCol, weights[i]);
       courseworkEditor.setCellValue(COURSEWORK_CW_HEADER_ROW, cwCol, label);
     }
   }
@@ -1112,12 +1170,15 @@
   }
 
   function setCourseworkLayout(examSheet, courseworkSheet, labels) {
+    const cwTotal = parseNumber(getCellValue(examSheet, 'F11'));
+    const weights = computeDefaultCourseworkWeights(cwTotal, labels.length);
     for (let i = 0; i < MAX_TEMPLATE_CW; i += 1) {
       const label = i < labels.length ? labels[i] : '';
       const examCol = colOffset(EXAM_CW_HEADER_FIRST_COL, i);
       const cwCol = colOffset(COURSEWORK_CW_HEADER_FIRST_COL, i);
 
       setCellValue(examSheet, `${examCol}${EXAM_CW_HEADER_ROW}`, label);
+      setCellValue(examSheet, `${examCol}${EXAM_CW_WEIGHT_ROW}`, weights[i]);
       setCellValue(courseworkSheet, `${cwCol}${COURSEWORK_CW_HEADER_ROW}`, label);
     }
   }

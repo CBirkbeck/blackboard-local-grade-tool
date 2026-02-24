@@ -16,3 +16,4 @@ Notes
 - All processing is local in your browser.
 - No server upload is used.
 - Child course sheets (if present) are merged into one upload file named *_upload.xls (CSV content).
+- Coursework count is inferred from Blackboard headers like {001}{MODULECODE}; weighting cells are auto-prepared for that count.
