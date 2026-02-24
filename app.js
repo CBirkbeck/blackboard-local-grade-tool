@@ -23,7 +23,6 @@
 
   const els = {
     buildExport: document.getElementById('build-export-file'),
-    buildModuleCode: document.getElementById('build-module-code'),
     buildModuleName: document.getElementById('build-module-name'),
     buildModuleOrganiser: document.getElementById('build-module-organiser'),
     buildStudentIdCol: document.getElementById('build-student-id-col'),
@@ -32,7 +31,6 @@
 
     mergeExport: document.getElementById('merge-export-file'),
     mergeWorkbook: document.getElementById('merge-workbook-file'),
-    mergeModuleCode: document.getElementById('merge-module-code'),
     mergeStudentIdCol: document.getElementById('merge-student-id-col'),
     mergeTargetCol: document.getElementById('merge-target-col'),
     mergeBlankUnmatched: document.getElementById('merge-blank-unmatched'),
@@ -77,19 +75,35 @@
     return text.trim();
   }
 
+  function extractPrimaryModuleCode(value) {
+    const text = String(value || '');
+    if (!text.trim()) return '';
+
+    const segments = [...text.matchAll(/\{([^}]*)\}/g)].map((m) => m[1]);
+    if (!segments.length) segments.push(text);
+
+    for (const segment of segments) {
+      const upper = String(segment || '').toUpperCase();
+      const mth = upper.match(/\b(MTH[A-Z]\d{4}[A-Z]?)\b/);
+      if (mth) return mth[1];
+      const generic = upper.match(/\b([A-Z]{4}\d{4}[A-Z]?)\b/);
+      if (generic) return generic[1];
+    }
+    return '';
+  }
+
   function normalizeModuleCode(value) {
     if (value === null || value === undefined) return '';
-    return String(value).replace(/\s+/g, '').trim().toUpperCase();
+    const text = String(value).trim();
+    if (!text) return '';
+    const extracted = extractPrimaryModuleCode(text);
+    if (extracted) return extracted;
+    return text.replace(/\s+/g, '').trim().toUpperCase();
   }
 
   function extractModuleCodeFromChildCourse(value) {
     const text = String(value || '').trim();
     if (!text) return '';
-    if (text.includes('{') && text.includes('}')) {
-      const pieces = [...text.matchAll(/\{([^}]*)\}/g)].map((m) => normalizeModuleCode(m[1]));
-      const found = pieces.find(Boolean);
-      if (found) return found;
-    }
     return normalizeModuleCode(text);
   }
 
@@ -280,7 +294,7 @@
     if (tie) {
       throw new Error(
         `Could not auto-infer module code (${contextLabel}) because multiple modules are equally likely. ` +
-        `Set module code manually.`
+        `Use an export file for one module only.`
       );
     }
     return bestModule;
@@ -582,28 +596,6 @@
     const m = String(ref || '').match(/^([A-Za-z]+)(\d+)$/);
     if (!m) throw new Error(`Invalid cell reference: ${ref}`);
     return { col: m[1].toUpperCase(), row: Number(m[2]) };
-  }
-
-  function computeDefaultCourseworkWeights(totalCourseworkWeight, usedCount) {
-    const out = new Array(MAX_TEMPLATE_CW).fill(0);
-    const count = Math.max(0, Math.min(MAX_TEMPLATE_CW, usedCount));
-    if (count === 0) return out;
-
-    const parsedTotal = parseNumber(totalCourseworkWeight);
-    const total = parsedTotal === null ? 40 : parsedTotal;
-    const round2 = (x) => Math.round(x * 100) / 100;
-
-    const even = round2(total / count);
-    let assigned = 0;
-    for (let i = 0; i < count; i += 1) {
-      if (i === count - 1) {
-        out[i] = round2(total - assigned);
-      } else {
-        out[i] = even;
-        assigned = round2(assigned + even);
-      }
-    }
-    return out;
   }
 
   function colToIdx(col) {
@@ -959,8 +951,6 @@
   }
 
   function setCourseworkLayoutXml(examEditor, courseworkEditor, labels) {
-    const cwTotal = examEditor.getCellValue(11, 'F');
-    const weights = computeDefaultCourseworkWeights(cwTotal, labels.length);
     const examStart = colToIdx(EXAM_CW_HEADER_FIRST_COL);
     const cwStart = colToIdx(COURSEWORK_CW_HEADER_FIRST_COL);
     for (let i = 0; i < MAX_TEMPLATE_CW; i += 1) {
@@ -968,7 +958,7 @@
       const examCol = idxToCol(examStart + i);
       const cwCol = idxToCol(cwStart + i);
       examEditor.setCellValue(EXAM_CW_HEADER_ROW, examCol, label);
-      examEditor.setCellValue(EXAM_CW_WEIGHT_ROW, examCol, weights[i]);
+      examEditor.clearCell(EXAM_CW_WEIGHT_ROW, examCol);
       courseworkEditor.setCellValue(COURSEWORK_CW_HEADER_ROW, cwCol, label);
     }
   }
@@ -1170,15 +1160,13 @@
   }
 
   function setCourseworkLayout(examSheet, courseworkSheet, labels) {
-    const cwTotal = parseNumber(getCellValue(examSheet, 'F11'));
-    const weights = computeDefaultCourseworkWeights(cwTotal, labels.length);
     for (let i = 0; i < MAX_TEMPLATE_CW; i += 1) {
       const label = i < labels.length ? labels[i] : '';
       const examCol = colOffset(EXAM_CW_HEADER_FIRST_COL, i);
       const cwCol = colOffset(COURSEWORK_CW_HEADER_FIRST_COL, i);
 
       setCellValue(examSheet, `${examCol}${EXAM_CW_HEADER_ROW}`, label);
-      setCellValue(examSheet, `${examCol}${EXAM_CW_WEIGHT_ROW}`, weights[i]);
+      clearCell(examSheet, `${examCol}${EXAM_CW_WEIGHT_ROW}`);
       setCellValue(courseworkSheet, `${cwCol}${COURSEWORK_CW_HEADER_ROW}`, label);
     }
   }
@@ -1318,8 +1306,6 @@
     const exportFile = els.buildExport.files[0];
     if (!exportFile) throw new Error('Blackboard export file is required.');
 
-    let moduleCode = normalizeModuleCode(els.buildModuleCode.value);
-
     const moduleName = els.buildModuleName.value.trim();
     const moduleOrganiser = els.buildModuleOrganiser.value.trim();
 
@@ -1332,11 +1318,8 @@
     const filteredRows = exportData.rows.filter((row) => normalizeRegNo(row[studentIdCol]));
     const { mainRows, childRows, childModuleCodes } = splitRowsByChildCourse(filteredRows, childCourseCol);
 
-    if (!moduleCode) {
-      moduleCode = inferDefaultModuleCode(exportData.headers, filteredRows, childCourseCol);
-      els.buildModuleCode.value = moduleCode;
-      log(`[build] inferred module code: ${moduleCode}`);
-    }
+    const moduleCode = inferDefaultModuleCode(exportData.headers, filteredRows, childCourseCol);
+    log(`[build] inferred main module code: ${moduleCode}`);
 
     const mainCw = detectCourseworkColumnsForModule(
       exportData.headers,
@@ -1431,23 +1414,11 @@
       raw: false,
     });
 
-    let defaultModule = normalizeModuleCode(els.mergeModuleCode.value);
-    if (!defaultModule) {
-      defaultModule = normalizeModuleCode(getCellValue(getSheet(workbook, 'Exam'), EXAM_MODULE_CODE_CELL));
-    }
-    if (!defaultModule) {
-      defaultModule = inferDefaultModuleCode(exportData.headers, exportData.rows, detectChildCourseColumn(exportData.headers));
-      log(`[merge] inferred module code from Blackboard export: ${defaultModule}`);
-    }
-    if (!defaultModule) {
-      throw new Error('Could not infer module code. Enter it manually.');
-    }
-    if (!els.mergeModuleCode.value.trim()) {
-      els.mergeModuleCode.value = defaultModule;
-    }
+    const childCourseCol = detectChildCourseColumn(exportData.headers);
+    const defaultModule = inferDefaultModuleCode(exportData.headers, exportData.rows, childCourseCol);
+    log(`[merge] inferred main module code: ${defaultModule}`);
 
     const studentIdCol = detectStudentIdColumn(exportData.headers, els.mergeStudentIdCol.value.trim());
-    const childCourseCol = detectChildCourseColumn(exportData.headers);
     const marksBySidModule = extractMarksWithModulesFromWorkbook(workbook);
 
     const modulesForTargets = new Set([defaultModule]);

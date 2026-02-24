@@ -219,11 +219,6 @@
         </div>
 
         <div class="field">
-          <label for="build-module-code">Module code (optional override)</label>
-          <input id="build-module-code" type="text" placeholder="Leave blank to auto-detect from Blackboard export" />
-        </div>
-
-        <div class="field">
           <label for="build-module-name">Module name</label>
           <input id="build-module-name" type="text" placeholder="e.g. Computation and Modelling" />
         </div>
@@ -251,6 +246,7 @@
 
         <div class="hint">
           Output name: same as Blackboard export, with <code>.xlsx</code> extension.
+          Module code is auto-read from Blackboard headers (for example <code>{001}{MTHA4007B-25-SEM2-B}</code> becomes <code>MTHA4007B</code>).
           If <code>Child Course</code> exists, child sheets are created automatically.
         </div>
       </div>
@@ -266,11 +262,6 @@
         <div class="field">
           <label for="merge-workbook-file">Filled moderation workbook (.xlsx)</label>
           <input id="merge-workbook-file" type="file" accept=".xlsx" />
-        </div>
-
-        <div class="field">
-          <label for="merge-module-code">Module code (optional if in Exam!C3)</label>
-          <input id="merge-module-code" type="text" placeholder="Leave blank to infer from workbook" />
         </div>
 
         <div class="field">
@@ -296,7 +287,7 @@
         <div class="hint">
           If workbook includes <code>Exam Child</code> + <code>Coursework Child</code>,
           merge reads both and outputs one combined upload file named <code>_upload.xls</code> (CSV content).
-          Coursework count is inferred from Blackboard headers (<code>{00x}{MODULE}</code>), and weighting cells are auto-prepared for that count.
+          Coursework count is inferred from Blackboard headers (<code>{00x}{MODULE}</code>), and coursework weighting cells are left blank for manual entry.
         </div>
       </div>
     </section>
