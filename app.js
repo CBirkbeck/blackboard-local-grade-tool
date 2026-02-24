@@ -6,7 +6,7 @@
   const MAX_TEMPLATE_CW = 4;
 
   const EXAM_MODULE_CODE_CELL = 'C3';
-  const EXAM_MODULE_NAME_CELL = 'D3';
+  const EXAM_MODULE_NAME_CELL = 'E3';
   const EXAM_ORGANISER_CELL = 'D6';
   const EXAM_CW_HEADER_FIRST_COL = 'D';
   const EXAM_CW_HEADER_ROW = 13;
