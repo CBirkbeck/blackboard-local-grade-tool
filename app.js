@@ -3,7 +3,7 @@
 
   const COURSEWORK_FIRST_ROW = 2;
   const EXAM_FIRST_ROW = 39;
-  const MAX_TEMPLATE_CW = 4;
+  const MAX_TEMPLATE_CW = 6;
 
   const EXAM_MODULE_CODE_CELL = 'C3';
   const EXAM_MODULE_NAME_CELL = 'E3';
@@ -1181,6 +1181,14 @@
       while (coursework.length < MAX_TEMPLATE_CW) coursework.push(null);
       records.push({ studentId: sid, coursework: coursework.slice(0, MAX_TEMPLATE_CW) });
     }
+    // Sort by student number (numeric ascending) so the moderation sheet rows
+    // follow sorted scripts; the Exam sheet pulls by row, so it follows too.
+    records.sort((a, b) => {
+      const na = Number(a.studentId);
+      const nb = Number(b.studentId);
+      if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na - nb;
+      return String(a.studentId).localeCompare(String(b.studentId), undefined, { numeric: true });
+    });
     return records;
   }
 
