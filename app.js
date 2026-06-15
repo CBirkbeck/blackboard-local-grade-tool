@@ -765,6 +765,13 @@
         if (!f) continue;
         const v = Array.from(cell.children).find((x) => x.localName === 'v');
         if (v) cell.removeChild(v);
+        // Drop the stale cached result type as well. The base template carries a
+        // mix of t="str" / numeric markers left over from old sample data; if a
+        // formula now recalculates to a number but the cell still says t="str",
+        // Excel for the web renders it as text (different font/alignment). Clearing
+        // t lets the forced recalc set the correct type and keeps every formula
+        // cell structurally identical.
+        cell.removeAttribute('t');
       }
     }
 
